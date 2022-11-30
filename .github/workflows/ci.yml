@@ -28,6 +28,12 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction
 
+      - name: Install Node dependencies
+        run: npm i
+
+      - name: Build assets
+        run: npm run build
+
       - name: Copy environment file
         run: cp .env.example .env
 
