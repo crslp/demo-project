@@ -1,0 +1,59 @@
+name: quality-control
+
+on:
+  push:
+    branches:
+      - master
+      - '*.x'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.1
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Login to Laravel Nova
+        run: composer config http-basic.nova.laravel.com ${NOVA_USERNAME} ${NOVA_PASSWORD}
+        env:
+          NOVA_PASSWORD: ${{ secrets.NOVA_PASSWORD }}
+          NOVA_USERNAME: ${{ secrets.NOVA_USERNAME }}
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+
+      - name: Generate app key
+        run: php artisan key:generate
+      
+      - name: Create Database
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+
+      - name: Run Larastan
+        run: vendor/bin/phpstan analyse
+
+      - name: Execute tests (Unit and Feature tests) via PHPUnit
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan test
+        
